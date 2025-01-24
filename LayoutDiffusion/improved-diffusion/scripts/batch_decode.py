@@ -13,16 +13,22 @@ modality = "e2e-tgt"
 
 
 output_lst = []
+
+print(sys.argv)
+
+
 for lst in full_lst:
     try:
+        files = glob.glob(f"{lst}/{pattern_}*pt")
         tgt = sorted(glob.glob(f"{lst}/{pattern_}*pt"))[int(ckpt)]
         lst = os.path.split(lst)[1]
         num = 1
+        
     except:
         continue
     model_arch = "transformer"
     mode = "text"  # or '1d-unet' in model_arch_
-
+    print(lst, "heyyywy")
     # diffusion_steps= 4000
     # noise_schedule = 'cosine'
     # dim = dim_.split('rand')[1]
@@ -52,7 +58,7 @@ for lst in full_lst:
         kk = 32
     elif "synth128" in lst:
         kk = 128
-
+    
     try:
         diffusion_steps = int(lst.split("_")[7 - num])
     except:
@@ -70,11 +76,14 @@ for lst in full_lst:
         num_channels = int(lst.split("_")[-1].split("h")[1])
     except:
         num_channels = 128
-
-    out_dir = "../results/generation_outputs/" + os.path.join(lst.split('/')[-1],constrained)
+    
+    print(lst, constrained)
+    # out_dir = "../results/generation_outputs/" + os.path.join(lst.split('/')[-1],constrained)
+    out_dir = "../results/generation_outputs/" + os.path.join(lst.split('/')[-1])
     folder = os.path.exists(out_dir)
     if not folder:
         os.makedirs(out_dir)
+    
     if constrained is None:
         COMMAND = (
             f"python scripts/{mode}_sample.py "
@@ -82,6 +91,7 @@ for lst in full_lst:
             f"--out_dir {out_dir} --multistep {multistep}"
         )
         print(COMMAND)
+    
     # os.system(COMMAND)
     else:
         COMMAND = (
@@ -90,7 +100,7 @@ for lst in full_lst:
             f"--out_dir {out_dir} --multistep {multistep} --constrained {constrained}"
         )
         print(COMMAND)
-
+    
     # shape_str = "x".join([str(x) for x in arr.shape])
     model_base_name = (
         os.path.basename(os.path.split(tgt)[0]) + f".{os.path.split(tgt)[1]}"

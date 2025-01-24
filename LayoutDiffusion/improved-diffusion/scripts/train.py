@@ -27,6 +27,10 @@ import torch.distributed as dist
 
 def main():
     args = create_argparser().parse_args()
+
+    # the hard coded false assignment is for things to work out bc even tough i passed false in args it still doesnt see it as false
+    args.submit = False
+
     if args.submit:
         args.e2e_train=os.getenv("AMLT_DATA_DIR", "..")+'/data/processed_datasets/'+args.e2e_train.split('/')[-1]
     print("load dataset from -----------------------",args.e2e_train)
@@ -74,6 +78,7 @@ def main():
         rev_tokenizer = None
 
     model22 = None
+    
 
     data = load_data_text(
         data_dir=args.data_dir,
@@ -87,14 +92,15 @@ def main():
         model=model22,
         ungen=args.ungen,
     )
-    next(data)
+    
+
     model2, tokenizer = load_models(args.modality, args.experiment, args.model_name_or_path, args.in_channel,
                                     args.checkpoint_path, extra_args=args)
     if args.modality == 'book' or args.use_bert_tokenizer == 'yes':
         rev_tokenizer = tokenizer # BERT tokenizer BPE.
     else:
         rev_tokenizer = {v: k for k, v in tokenizer.items()}
-
+    
     data_valid = load_data_text(
         data_dir=args.data_dir,
         batch_size=args.batch_size,
@@ -108,6 +114,8 @@ def main():
         model=model2,
         ungen=args.ungen,
     )
+
+    data_valid = None # we are using the whole ade20k dataset for training
 
     def get_mapping_func(args, diffusion, data):
         model2, tokenizer = load_models(args.modality, args.experiment, args.model_name_or_path, args.in_channel,

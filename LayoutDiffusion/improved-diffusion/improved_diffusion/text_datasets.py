@@ -174,6 +174,7 @@ def get_corpus_rocstory(data_args, model, seq_length, padding_mode='block',
             sentence_lst = []
             nlp = English()
             tokenizer = nlp.tokenizer
+
             if split == 'train':
                 print('loading form the TRAIN set')
                 path = f'{data_args.e2e_train}/src1_train.txt'
@@ -197,17 +198,45 @@ def get_corpus_rocstory(data_args, model, seq_length, padding_mode='block',
             if split in ['train', 'valid', 'test']:
                 with open(path, 'r') as ff:
                     for row in ff:
-                        # word_lst = row.split('||')[1] 
-                        word_lst=row.rstrip('\n') #junyi RICO
-                        word_lst = [x.text for x in tokenizer(word_lst)]
-                        sentence_lst.append(word_lst)
+                        # Remove newline character
+                        row = row.rstrip('\n')
+                        
+                        # Split the line into parts
+                        parts = row.split(' | ')  # Split by the separator
+                        
+                        # Process each part
+                        processed_parts = []
+                        for part in parts:
+                            # Split into label and coordinates
+                            tokens = part.split(' ')
+                            label = ' '.join(tokens[:-4])  # Combine all tokens except the last 4 (coordinates)
+                            coordinates = tokens[-4:]      # Last 4 tokens are coordinates
+                            
+                            # Treat the entire label as a single token
+                            processed_part = [label] + coordinates  # Combine label and coordinates
+                            processed_parts.append(processed_part)
+                        
+                        # Flatten the list and insert "|" between sublists
+                        flattened_list = []
+                        for sublist in processed_parts:
+                            flattened_list.extend(sublist)  # Add elements of the sublist
+                            flattened_list.append("|")      # Add "|" as a separator
 
+                        # Remove the last "|" (optional, if you don't want a trailing separator)
+                        flattened_list = flattened_list[:-1]
+
+                        # Append the processed line to sentence_lst
+                        sentence_lst.append(flattened_list)
+        
         # get tokenizer.
         if load_vocab is None:
             counter = Counter()
             for input_ids in sentence_lst:
-                counter.update(input_ids)
+                # Flatten the list of lists into a single list of tokens
+                tokens = [token for sublist in input_ids for token in sublist]
+                counter.update(tokens)
 
+        
     if load_vocab is None:
         if data_args.e2e_train.split('/')[-1]=='RICO_nosep':
             vocab_dict = {'PAD':0}

@@ -393,7 +393,7 @@ class DiffusionTransformer(nn.Module):
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
             torch.cat([
             torch.zeros(bz,128,self.type_classes+5,device=device),
-            self.q_onestep_mats[t].to(device),
+            self.q_onestep_mats[t.to("cpu")].to(device),
             torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_ct1, log_ct1).exp(),
@@ -463,7 +463,6 @@ class DiffusionTransformer(nn.Module):
             log_add_exp(torch.zeros(bz,1,128,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct, log_cumprod_ct).exp(),
             torch.ones(bz,1,1,device=device)],dim=-1),
             ],dim=-2)
-
             matrix2=torch.cat([
             torch.cat([torch.eye(5,device=device).expand(bz,-1,-1),torch.zeros(bz,5,self.num_classes-5,device=device)],dim=-1),
             torch.cat([
@@ -472,7 +471,8 @@ class DiffusionTransformer(nn.Module):
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
             torch.cat([
             torch.zeros(bz,128,self.type_classes+5,device=device),
-            self.q_mats[t].to(device),
+            
+            self.q_mats[t.to("cpu")].to(device),
             torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct1, log_cumprod_ct1).exp(),
@@ -639,6 +639,7 @@ class DiffusionTransformer(nn.Module):
         return log_sample
 
     def q_sample(self, log_x_start, t):                 # diffusion step, q(xt|x0) and sample xt
+
         log_EV_qxt_x0 = self.q_pred(log_x_start, t)
         log_sample = self.log_sample_categorical(log_EV_qxt_x0)
 
@@ -871,6 +872,7 @@ class DiffusionTransformer(nn.Module):
                 0.08247029, 0.0905211,  0.0949399,  0.0959322,  0.08953522, 0.07810608,
                 0.0619627,  0.04775897, 0.03585776, 0.0261788,  0.018812,   0.01404317,
                 0.00972071, 0.00664104])
+            
 
             m = Categorical(probs)
             mask=self.num_classes-1
