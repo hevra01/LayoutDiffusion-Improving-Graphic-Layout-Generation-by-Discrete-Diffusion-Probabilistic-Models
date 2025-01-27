@@ -79,7 +79,6 @@ def main():
 
     model22 = None
     
-
     data = load_data_text(
         data_dir=args.data_dir,
         batch_size=args.batch_size,
@@ -93,6 +92,8 @@ def main():
         ungen=args.ungen,
     )
     
+    print(args.modality, args.experiment, args.model_name_or_path, args.in_channel,
+                                    args.checkpoint_path)
 
     model2, tokenizer = load_models(args.modality, args.experiment, args.model_name_or_path, args.in_channel,
                                     args.checkpoint_path, extra_args=args)
@@ -172,6 +173,7 @@ def create_argparser():
         eval_interval=2000,
         ungen=False,
         self_cond=False,
+        resolution=512,
     )
     text_defaults = dict(modality='text',
                          dataset_name='wikitext',

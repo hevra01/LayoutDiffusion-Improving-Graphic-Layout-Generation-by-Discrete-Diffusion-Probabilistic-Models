@@ -50,6 +50,7 @@ class TrainLoop:
         eval_data=None,
         eval_interval=-1,
         training_mode='e2e',
+        resolution=512
     ):
         self.model = model
         self.training_mode=training_mode
@@ -109,7 +110,7 @@ class TrainLoop:
                 device_ids=[dist_util.dev()],
                 output_device=dist_util.dev(),
                 broadcast_buffers=False,
-                bucket_cap_mb=128,
+                bucket_cap_mb=resolution,
                 find_unused_parameters=False,
             )
         else:
@@ -177,7 +178,8 @@ class TrainLoop:
 
             # print(batch.shape,'batch') #(bz, img**2, embed_dim) (64,144,64) (64,20,4)
             # print(cond['input_ids'].shape,'cond')# (bz, img**2) (64,144) (64,20)
-
+            print('batch',batch.shape)
+            
             self.run_step(batch, cond)  #single step
 
             if self.step % self.log_interval == 0:

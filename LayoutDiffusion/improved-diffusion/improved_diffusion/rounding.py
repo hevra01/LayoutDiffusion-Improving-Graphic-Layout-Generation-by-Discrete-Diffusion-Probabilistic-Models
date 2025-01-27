@@ -23,9 +23,16 @@ def load_models(modality, mode, model_name_or_path, emb_dim, file, extra_args=No
                 vocab = json.load(f)
             tokenizer = {v: k for k, v in vocab.items()}
         model = torch.nn.Embedding(len(tokenizer), emb_dim)
-        path_save = "{}/random_emb.torch".format(file)
-        model.load_state_dict(torch.load(path_save))
 
+        path_save = "{}/random_emb.torch".format(file)
+
+        # Check if the file exists and load if valid
+        if os.path.exists(path_save):
+            model.load_state_dict(torch.load(path_save))
+            print("Checkpoint loaded successfully!")
+        else:
+            print("Checkpoint file does not exist. Creating a new embedding.")
+        
     return model, tokenizer
 
 

@@ -209,7 +209,7 @@ class DiffusionTransformer(nn.Module):
         learnable_cf=False,
         matrix_policy=1,
         att_1=0.99999,
-        num_classes=159,
+        num_classes=1213, # i had to change this to 1213 for ade20k, which represents the vocab size =  number of classes + resolution + special tokens
         rescale_weight=False,
         content_seq_len=121,
         alignment_loss=False,
@@ -238,7 +238,8 @@ class DiffusionTransformer(nn.Module):
         self.num_classes = num_classes #self.num_classes-1+1
         # if matrix_policy==1:
         #     self.num_classes+=1
-        self.type_classes = num_classes-1-128-5 #-1 is the mask token; -128 is the coord token; -5 is the special token
+        # 128 is the number of pixel values, but it has been changed to 152 for ade20k (our resolution)
+        self.type_classes = num_classes-1-512-5 #-1 is the mask token; -128 is the coord token; -5 is the special token
         self.loss_type = 'vb_stochastic'
         self.shape = content_seq_len
         self.num_timesteps = diffusion_step
@@ -872,6 +873,18 @@ class DiffusionTransformer(nn.Module):
                 0.08247029, 0.0905211,  0.0949399,  0.0959322,  0.08953522, 0.07810608,
                 0.0619627,  0.04775897, 0.03585776, 0.0261788,  0.018812,   0.01404317,
                 0.00972071, 0.00664104])
+
+            elif self.num_classes==1213: 
+                # num_classes implies the vocab size here and the below probs are for the labels in the ADE20K dataset
+                print("sampling ade20k...")
+
+                # Path to the saved tensor file
+                tensor_save_path = "/home/hepe00001/Desktop/neuro_explicit/generative_diffusion/LayoutGeneration/LayoutDiffusion/results/checkpoint/ade20k/ade20k_class_prob_without_label.pt"  # Replace with the actual path
+
+                # Load the tensor from the file
+                probs = torch.load(tensor_save_path)
+                print("hev here")
+                print(probs)
             
 
             m = Categorical(probs)

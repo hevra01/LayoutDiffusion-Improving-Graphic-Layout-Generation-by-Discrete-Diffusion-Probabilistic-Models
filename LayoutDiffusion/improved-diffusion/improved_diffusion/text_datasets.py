@@ -196,6 +196,9 @@ def get_corpus_rocstory(data_args, model, seq_length, padding_mode='block',
                         sentence_lst.append(json.loads(line)[0].split(' '))
                 sentence_lst = sentence_lst + sentence_lst
             if split in ['train', 'valid', 'test']:
+                
+                # Initialize a dictionary to count labels
+                label_counts = defaultdict(int)
                 with open(path, 'r') as ff:
                     for row in ff:
                         # Remove newline character
@@ -219,6 +222,13 @@ def get_corpus_rocstory(data_args, model, seq_length, padding_mode='block',
                         # Flatten the list and insert "|" between sublists
                         flattened_list = []
                         for sublist in processed_parts:
+                            # Extract the label (first element of sublist)
+                            
+                            current_label = sublist[0]
+                            # Update the label count
+                            label_counts[current_label] += 1
+
+
                             flattened_list.extend(sublist)  # Add elements of the sublist
                             flattened_list.append("|")      # Add "|" as a separator
 
@@ -227,14 +237,26 @@ def get_corpus_rocstory(data_args, model, seq_length, padding_mode='block',
 
                         # Append the processed line to sentence_lst
                         sentence_lst.append(flattened_list)
+                    
+                    # Calculate probabilities
+                    total_labels = sum(label_counts.values())
+                    label_probabilities = {label: (count / total_labels) for label, count in label_counts.items()}
+                    
+                    # File path to save the JSON
+                    file_path = "../results/checkpoint/ade20k/ade20k_class_probabilities.json"
+                    
+                    # Save the dictionary as a JSON file
+                    with open(file_path, 'w') as json_file:
+                        json.dump(label_probabilities, json_file, indent=4)
+
+                    print(f"Dictionary has been saved as JSON to {file_path}")
+                        
         
         # get tokenizer.
         if load_vocab is None:
             counter = Counter()
             for input_ids in sentence_lst:
-                # Flatten the list of lists into a single list of tokens
-                tokens = [token for sublist in input_ids for token in sublist]
-                counter.update(tokens)
+                counter.update(input_ids)
 
         
     if load_vocab is None:
@@ -243,10 +265,10 @@ def get_corpus_rocstory(data_args, model, seq_length, padding_mode='block',
         else:
             vocab_dict = {'START': 0, 'END': 1, 'UNK':2, 'PAD':3, '|':4 }
         for k, v in counter.items():
-            if v > 10:
-                if k not in [str(num) for num in range(128)] and k not in vocab_dict:
-                    vocab_dict[k] = len(vocab_dict)
-        for num in range(128):
+            # if v > 10: we want to remove this condition, bc if it appears less than 10 times, we still want to include it.
+            if k not in [str(num) for num in range(data_args.resolution)] and k not in vocab_dict:
+                vocab_dict[k] = len(vocab_dict)
+        for num in range(data_args.resolution):
             vocab_dict[str(num)] = len(vocab_dict)
 
         path_save_vocab = f'{data_args.checkpoint_path}/vocab.json'
