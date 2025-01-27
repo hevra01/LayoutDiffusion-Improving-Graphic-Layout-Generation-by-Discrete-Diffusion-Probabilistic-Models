@@ -47,6 +47,7 @@ def main():
     args = create_argparser().parse_args()
 
     constrained=args.constrained # coupled with line69
+    print("constrained inside text_sample main: ", constrained)
     
     dist_util.setup_dist()
     logger.configure()
@@ -100,7 +101,7 @@ def main():
             deterministic=True,
             task_mode=args.modality,
             padding_mode=args.padding_mode,  # block, pad
-            split='test',
+            split='train', # this should be test normally but for the sake of the current experiment, we use train
             load_vocab=rev_tokenizer,
         )
 
@@ -121,7 +122,7 @@ def main():
             deterministic=True,
             task_mode=args.modality,
             padding_mode=args.padding_mode,  # block, pad
-            split='test',
+            split='train', # this should be test normally but for the sake of the current experiment, we use train
             load_vocab=rev_tokenizer,
         )
 
@@ -142,7 +143,7 @@ def main():
         model_kwargs = {}
         if args.constrained is not None:
             batch, model_kwargs = next(data)
-
+            print(model_kwargs.keys())
             model_kwargs["y"]=model_kwargs.pop('input_ids').to(dist_util.dev())
             
         # rico here

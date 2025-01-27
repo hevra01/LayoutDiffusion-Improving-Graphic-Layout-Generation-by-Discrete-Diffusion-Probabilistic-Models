@@ -15,6 +15,7 @@ modality = "e2e-tgt"
 output_lst = []
 
 print(sys.argv)
+print("len(sys.argv)", len(sys.argv), "constrained", constrained)
 
 
 for lst in full_lst:
@@ -26,9 +27,9 @@ for lst in full_lst:
         
     except:
         continue
-    model_arch = "transformer"
+
     mode = "text"  # or '1d-unet' in model_arch_
-    print(lst, "heyyywy")
+    
     # diffusion_steps= 4000
     # noise_schedule = 'cosine'
     # dim = dim_.split('rand')[1]

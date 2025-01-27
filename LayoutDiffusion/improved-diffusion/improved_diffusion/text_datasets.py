@@ -178,6 +178,7 @@ def get_corpus_rocstory(data_args, model, seq_length, padding_mode='block',
             if split == 'train':
                 print('loading form the TRAIN set')
                 path = f'{data_args.e2e_train}/src1_train.txt'
+                print("hevv path", path)
             elif split == 'valid':
                 print('loading form the VALID set')
                 path = f'{data_args.e2e_train}/src1_valid.txt'
