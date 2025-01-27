@@ -159,3 +159,5 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 LayoutDiffusion/results/checkpoint/*.pt
+
+/home/hepe00001/Desktop/neuro_explicit/generative_diffusion/LayoutGeneration/LayoutDiffusion/results/checkpoint/ade20k/ema_0.9999_050000.pt
