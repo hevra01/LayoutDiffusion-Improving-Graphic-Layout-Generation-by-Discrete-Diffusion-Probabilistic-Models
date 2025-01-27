@@ -69,7 +69,7 @@ def gaussian_matrix2(t,bt):
     Returns:
       Q_t: transition matrix. shape = (num_pixel_vals, num_pixel_vals).
     """
-    num_pixel_vals=128
+    num_pixel_vals=512 # for our use case, but originally it was 512
     transition_bands = num_pixel_vals - 1
 
     beta_t = bt.numpy()[t]
@@ -105,7 +105,7 @@ def gaussian_matrix2(t,bt):
 
     return mat
 
-def alpha_schedule(time_step, N=100, att_1 = 0.99999, att_T = 0.000009, ctt_1 = 0.000009, ctt_T = 0.99999, matrix_policy=0, type_classes=25):
+def alpha_schedule(time_step, N=100, att_1 = 0.99999, att_T = 0.000009, ctt_1 = 0.000009, ctt_T = 0.99999, matrix_policy=0, type_classes=695):
 
     if matrix_policy==1: #for gaussian refine
         sep=5
@@ -146,10 +146,10 @@ def alpha_schedule(time_step, N=100, att_1 = 0.99999, att_T = 0.000009, ctt_1 = 
         one_minus_btt2 = 1 - btt2
         one_minus_bt2 = one_minus_btt2[1:] / one_minus_btt2[:-1]
         bt2 = 1-one_minus_bt2
-        btt2 = (1-att-ctt)/128
+        btt2 = (1-att-ctt)/512
 
-        bt2=np.concatenate((bt2[:time_step*sep_1//sep],at1[time_step*sep_1//sep:]/128))
-        at=np.concatenate((at[:time_step*sep_1//sep],(1-ct-bt2*128)[time_step*sep_1//sep:])).clip(min=1e-30)
+        bt2=np.concatenate((bt2[:time_step*sep_1//sep],at1[time_step*sep_1//sep:]/512))
+        at=np.concatenate((at[:time_step*sep_1//sep],(1-ct-bt2*512)[time_step*sep_1//sep:])).clip(min=1e-30)
         ct=np.concatenate(((1-at-bt2)[:time_step*sep_1//sep],ct[time_step*sep_1//sep:])).clip(min=1e-30)
 
         return at,at1, bt1,bt2, ct,ct1, att,att1, btt1,btt2, ctt,ctt1 
@@ -238,8 +238,8 @@ class DiffusionTransformer(nn.Module):
         self.num_classes = num_classes #self.num_classes-1+1
         # if matrix_policy==1:
         #     self.num_classes+=1
-        # 128 is the number of pixel values, but it has been changed to 152 for ade20k (our resolution)
-        self.type_classes = num_classes-1-512-5 #-1 is the mask token; -128 is the coord token; -5 is the special token
+        # 512 is the number of pixel values, but it has been changed to 152 for ade20k (our resolution)
+        self.type_classes = num_classes-1-512-5 #-1 is the mask token; -512 is the coord token; -5 is the special token
         self.loss_type = 'vb_stochastic'
         self.shape = content_seq_len
         self.num_timesteps = diffusion_step
@@ -318,7 +318,7 @@ class DiffusionTransformer(nn.Module):
         bt2=torch.where(bt2==0.,bt2.max(),bt2)
         q_one_step_mats = [gaussian_matrix2(t,bt=bt2.pow(2).pow(pow_num/2)*mul_num)
                         for t in range(0, self.num_timesteps)]
-        q_one_step_mats.append(np.ones((128,128))/(128**2))
+        q_one_step_mats.append(np.ones((512,512))/(512**2))
         q_onestep_mats = np.stack(q_one_step_mats, axis=0)
         q_onestep_mats=torch.from_numpy(q_onestep_mats).float()
         self.register_buffer('q_onestep_mats', q_onestep_mats)
@@ -330,12 +330,12 @@ class DiffusionTransformer(nn.Module):
             q_mat_t = np.tensordot(q_mat_t, self.q_onestep_mats[t],
                                     axes=[[1], [0]])
             q_mats.append(q_mat_t)
-        q_mats.append(np.ones((128,128))/(128**2))
+        q_mats.append(np.ones((512,512))/(512**2))
         q_mats = np.stack(q_mats, axis=0)
         q_mats=torch.from_numpy(q_mats).float()
         self.register_buffer('q_mats', q_mats)
-        assert self.q_mats.shape == (self.num_timesteps+1, 128,
-                                    128), self.q_mats.shape
+        assert self.q_mats.shape == (self.num_timesteps+1, 512,
+                                    512), self.q_mats.shape
 
         self.diffusion_acc_list = [0] * self.num_timesteps
         self.diffusion_keep_list = [0] * self.num_timesteps
@@ -377,12 +377,12 @@ class DiffusionTransformer(nn.Module):
             log_add_exp(torch.eye(self.type_classes,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_at1, log_bt1).exp(),
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
             torch.cat([
-            torch.zeros(bz,128,self.type_classes+5,device=device),
-            log_add_exp(torch.eye(128,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_at, log_bt2).exp(),
-            torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
+            torch.zeros(bz,512,self.type_classes+5,device=device),
+            log_add_exp(torch.eye(512,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_at, log_bt2).exp(),
+            torch.zeros(bz,512,self.num_classes-5-self.type_classes-512,device=device)],dim=-1),
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_ct1, log_ct1).exp(),
-            log_add_exp(torch.zeros(bz,1,128,device=device).clamp(min=1e-30).log() +log_1_min_ct, log_ct).exp(),
+            log_add_exp(torch.zeros(bz,1,512,device=device).clamp(min=1e-30).log() +log_1_min_ct, log_ct).exp(),
             torch.ones(bz,1,1,device=device)],dim=-1),
             ],dim=-2)
 
@@ -393,12 +393,12 @@ class DiffusionTransformer(nn.Module):
             log_add_exp(torch.eye(self.type_classes,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_at1, log_bt1).exp(),
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
             torch.cat([
-            torch.zeros(bz,128,self.type_classes+5,device=device),
+            torch.zeros(bz,512,self.type_classes+5,device=device),
             self.q_onestep_mats[t.to("cpu")].to(device),
-            torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
+            torch.zeros(bz,512,self.num_classes-5-self.type_classes-512,device=device)],dim=-1),
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_ct1, log_ct1).exp(),
-            log_add_exp(torch.zeros(bz,1,128,device=device).clamp(min=1e-30).log() +log_1_min_ct, log_ct).exp(),
+            log_add_exp(torch.zeros(bz,1,512,device=device).clamp(min=1e-30).log() +log_1_min_ct, log_ct).exp(),
             torch.ones(bz,1,1,device=device)],dim=-1),
             ],dim=-2)
 
@@ -417,13 +417,13 @@ class DiffusionTransformer(nn.Module):
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
 
             torch.cat([
-            torch.zeros(bz,128,self.type_classes+5,device=device),
+            torch.zeros(bz,512,self.type_classes+5,device=device),
             self.q_onestep_mats[t].to(device),
-            torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
+            torch.zeros(bz,512,self.num_classes-5-self.type_classes-512,device=device)],dim=-1),
 
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_ct1, log_ct1).exp(),
-            log_add_exp(torch.zeros(bz,1,128,device=device).clamp(min=1e-30).log() +log_1_min_ct, log_ct).exp(),
+            log_add_exp(torch.zeros(bz,1,512,device=device).clamp(min=1e-30).log() +log_1_min_ct, log_ct).exp(),
             torch.ones(bz,1,1,device=device)],dim=-1),
             ],dim=-2)
 
@@ -456,12 +456,12 @@ class DiffusionTransformer(nn.Module):
             log_add_exp(torch.eye(self.type_classes,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_cumprod_at1, log_cumprod_bt1).exp(),
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
             torch.cat([
-            torch.zeros(bz,128,self.type_classes+5,device=device),
-            log_add_exp(torch.eye(128,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_cumprod_at, log_cumprod_bt2).exp(),
-            torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
+            torch.zeros(bz,512,self.type_classes+5,device=device),
+            log_add_exp(torch.eye(512,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_cumprod_at, log_cumprod_bt2).exp(),
+            torch.zeros(bz,512,self.num_classes-5-self.type_classes-512,device=device)],dim=-1),
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct1, log_cumprod_ct1).exp(),
-            log_add_exp(torch.zeros(bz,1,128,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct, log_cumprod_ct).exp(),
+            log_add_exp(torch.zeros(bz,1,512,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct, log_cumprod_ct).exp(),
             torch.ones(bz,1,1,device=device)],dim=-1),
             ],dim=-2)
             matrix2=torch.cat([
@@ -471,13 +471,13 @@ class DiffusionTransformer(nn.Module):
             log_add_exp(torch.eye(self.type_classes,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_cumprod_at1, log_cumprod_bt1).exp(),
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
             torch.cat([
-            torch.zeros(bz,128,self.type_classes+5,device=device),
+            torch.zeros(bz,512,self.type_classes+5,device=device),
             
             self.q_mats[t.to("cpu")].to(device),
-            torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
+            torch.zeros(bz,512,self.num_classes-5-self.type_classes-512,device=device)],dim=-1),
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct1, log_cumprod_ct1).exp(),
-            log_add_exp(torch.zeros(bz,1,128,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct, log_cumprod_ct).exp(),
+            log_add_exp(torch.zeros(bz,1,512,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct, log_cumprod_ct).exp(),
             torch.ones(bz,1,1,device=device)],dim=-1),
             ],dim=-2)
             matrix=torch.where(mask,matrix2,matrix1)
@@ -494,13 +494,13 @@ class DiffusionTransformer(nn.Module):
             log_add_exp(torch.eye(self.type_classes,device=device).clamp(min=1e-30).log().expand(bz,-1,-1) +log_cumprod_at1, log_cumprod_bt1).exp(),
             torch.zeros(bz,self.type_classes,self.num_classes-5-self.type_classes,device=device)],dim=-1),
             torch.cat([
-            torch.zeros(bz,128,self.type_classes+5,device=device),
+            torch.zeros(bz,512,self.type_classes+5,device=device),
             self.q_mats[t].to(device),
-            torch.zeros(bz,128,self.num_classes-5-self.type_classes-128,device=device)],dim=-1),
+            torch.zeros(bz,512,self.num_classes-5-self.type_classes-512,device=device)],dim=-1),
 
             torch.cat([torch.zeros(bz,1,5,device=device),
             log_add_exp(torch.zeros(bz,1,self.type_classes,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct1, log_cumprod_ct1).exp(),
-            log_add_exp(torch.zeros(bz,1,128,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct, log_cumprod_ct).exp(),
+            log_add_exp(torch.zeros(bz,1,512,device=device).clamp(min=1e-30).log() +log_1_min_cumprod_ct, log_cumprod_ct).exp(),
             torch.ones(bz,1,1,device=device)],dim=-1),
             ],dim=-2)
 
@@ -909,7 +909,7 @@ class DiffusionTransformer(nn.Module):
 
             if constrained=='type':
                 print("type constrained")
-                uniform=torch.ones(128)/128
+                uniform=torch.ones(512)/512
                 m = Categorical(uniform)
                 noise=m.sample(torch.tensor([batch_size,self.content_seq_len])).to(device)+self.type_classes+5
                 bbox_mask=torch.tensor([0,0,1,1,1,1]*20+[0]).to(device)
@@ -918,7 +918,7 @@ class DiffusionTransformer(nn.Module):
 
             if self.ori_schedule_type.startswith('gaussian_refine_pow2.5_wo_bbox_absorb'): #wo bbox absorb
                 print("wo type absorb")
-                uniform=torch.ones(128)/128
+                uniform=torch.ones(512)/512
                 m = Categorical(uniform)
                 noise=m.sample(torch.tensor([batch_size,self.content_seq_len])).to(device)+self.type_classes+5
                 bbox_mask=torch.tensor([0,0,1,1,1,1]*20+[0]).to(device)
