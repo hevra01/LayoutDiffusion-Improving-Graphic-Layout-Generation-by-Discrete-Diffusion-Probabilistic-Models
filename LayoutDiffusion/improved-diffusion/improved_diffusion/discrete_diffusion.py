@@ -883,8 +883,7 @@ class DiffusionTransformer(nn.Module):
 
                 # Load the tensor from the file
                 probs = torch.load(tensor_save_path)
-                print("hev here")
-                print(probs)
+                
             
 
             m = Categorical(probs)
