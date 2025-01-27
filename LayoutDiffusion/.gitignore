@@ -1,7 +1,6 @@
 pics
 data/raw_datasets/publaynet/
 tmp
-checkpoint
 generation_outputs
 !results/checkpoint/README.md
 !results/generation_outputs/README.md

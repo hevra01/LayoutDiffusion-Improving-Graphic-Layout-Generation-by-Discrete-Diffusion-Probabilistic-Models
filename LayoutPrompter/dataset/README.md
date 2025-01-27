@@ -1,1 +1,0 @@
-Please download the datasets from [HuggingFace](https://huggingface.co/datasets/KyleLin/LayoutPrompter)
